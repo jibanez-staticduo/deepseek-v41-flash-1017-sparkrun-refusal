@@ -4,6 +4,18 @@ This repository, [jibanez-staticduo/deepseek-v41-flash-1017-sparkrun-refusal](ht
 
 The implementation targets the r6x TileLang/vLLM stack on NVIDIA GB10 systems. It is an inference integration and an experimental control, not a claim that refusal behavior has been calibrated or improved on a benchmark.
 
+## Credits And Declared Lineage
+
+According to the lineage declared by the mechanism's author, **Dani designed this runtime integration approach: a rank-1 projection with a switchable lambda dial, allowing the original checkpoint to be served without baking the ablation into its weights.** It originated in his qwen38 work, and Dani also ported it to DeepSeek V4.0-Flash (0731). His reported milestones are:
+
+- **2026-08-12:** `deepseek-v4-rank1`, hot lambda switching, lambda-0 bit-exactness, and 46 F32[4096] directions.
+- **2026-08-18:** `rank1g`, an in-place device lambda buffer so CUDA Graphs read its updated value instead of baking in the strength.
+- **2026-09-03:** a per-request lambda dial in qwen38, working value 1.0 and default 0.
+- **2026-09-24:** a token-by-token probe and calibration `cal-20260924a`.
+- **2026-10-15:** handover to Staticduo.
+
+These milestones are attributed author statements, not an independent audit of Dani's Git history or current service. This credits the lineage of this runtime integration, without claiming that the underlying mathematical projection or directional-ablation research originated here. **Our 1017 implementation is a third generation in that declared lineage**, with separate request/row plumbing and different directions published by **pqhaz**, not recalibrated by us. Credit also remains with **christopherowen/spark-ds41f**, **local-inference-lab/vLLM and B12X**, their dependencies, and **Infatoshi** for the referenced checkpoint comparison. See [attribution](ATTRIBUTION.md#runtime-mechanism-lineage) and [direction provenance](docs/provenance.md).
+
 ## What it does
 
 - Loads the official `deepseek-ai/DeepSeek-V4.1-Flash-1017` checkpoint and a separately pinned set of 38 refusal directions.

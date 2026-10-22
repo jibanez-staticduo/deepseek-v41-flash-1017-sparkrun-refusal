@@ -6,6 +6,27 @@ and build inputs; this repository does not vendor complete third-party source
 trees. The root [LICENSE](LICENSE) applies to original project code. Third-party
 files retain their respective licenses and notices.
 
+## Runtime Mechanism Lineage
+
+According to the lineage declared by the mechanism's author, Dani designed the
+runtime rank-1 integration with a switchable lambda dial used as the antecedent
+to this project: it began in qwen38 and he ported it to DeepSeek V4.0-Flash
+(0731). The declared milestones are `deepseek-v4-rank1` on 2026-08-12 (hot
+lambda, lambda-0 bit-exactness, 46 F32[4096] directions), `rank1g` on 2026-08-18
+(an in-place device lambda buffer for CUDA Graphs), the qwen38 per-request dial
+on 2026-09-03 (working lambda 1.0, default 0), the token-by-token probe and
+`cal-20260924a` calibration on 2026-09-24, and the handover on 2026-10-15.
+
+These are attributed author statements; this project has not independently
+audited that Git history or the author's current service. The credit concerns
+this runtime integration's declared lineage, not original authorship of the
+mathematical projection or directional-ablation research. The present 1017
+implementation is a third generation in that lineage, using different
+pqhaz-published directions without recalibrating them ourselves. This
+acknowledgment does not replace the component, model or direction-data credits
+and licenses below. Infatoshi is credited for the referenced native-checkpoint
+comparison documented in [provenance](docs/provenance.md).
+
 ## Sources used by the recipe/runtime
 
 | Component | Pinned source | License | License SHA-256 | Required handling |

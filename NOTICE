@@ -3,6 +3,19 @@ third-party code and runtime components. The repository LICENSE applies to
 original project code; it does not replace the licenses of third-party files
 identified below.
 
+Runtime mechanism lineage acknowledgment
+----------------------------------------
+
+According to the lineage declared by the mechanism's author, Dani designed
+the runtime rank-1 integration with a switchable lambda dial, originating in
+qwen38 and ported by him to DeepSeek V4.0-Flash (0731), before the 2026-10-15
+handover. This project's 1017 integration is a third generation in that
+declared lineage, using different pqhaz directions without recalibrating them.
+This is an attribution of the author's account, not independent verification
+of his Git history or service, nor a claim of original authorship of the
+underlying mathematical projection. See README.md and ATTRIBUTION.md for the
+reported milestones and the separate component and data credits.
+
 Apache-2.0 components
 ---------------------
 
