@@ -1,0 +1,58 @@
+This project combines original Staticduo refusal-integration code with
+third-party code and runtime components. The repository LICENSE applies to
+original project code; it does not replace the licenses of third-party files
+identified below.
+
+Apache-2.0 components
+---------------------
+
+The SparkRun recipe derives from christopherowen/spark-ds41f at commit
+c38a24f2c9e714d2648769b12cd71aa6f0834d00. Its source LICENSE is reproduced
+in licenses/Apache-2.0-spark-ds41f.txt. The derivation and component links are
+documented in ATTRIBUTION.md.
+
+The build may overlay files from vLLM. Those source files retain their
+upstream Apache-2.0 SPDX and copyright notices. The vLLM revision used by the
+upstream runtime lock is
+local-inference-lab/vllm@19f2c20ed4d64ae22bd009ceacadd85e2a81e354; the canonical
+vLLM base revision recorded in that lock is
+vllm-project/vllm@0f8fa53acf43a9a6a7a1f7e6b196950c78cd6d7a. Files overlaid by
+this project receive a prominent modification notice during local build
+preparation. See licenses/Apache-2.0-vllm.txt and ATTRIBUTION.md.
+
+Additional Apache-2.0 runtime sources are B12X at
+local-inference-lab/b12x@236ddff04a5f5064084b46464800b70b34ec7d8c and SparkNet
+at christopherowen/dgx-spark-networking@3bc8d10104a5012244a0424d7dfc1107a72eafab.
+Their pinned LICENSE files are reproduced in licenses/Apache-2.0-B12X.txt and
+licenses/Apache-2.0-sparknet.txt. NCCL contains Apache-2.0, BSD-licensed, and
+separately attributed files; its complete pinned LICENSE.txt is reproduced at
+licenses/NCCL-LICENSE.txt. Applicable file-level notices remain relevant.
+
+The optional external SparkRun package is Apache-2.0 AND AGPL-3.0-only. The
+SparkRoute plugin carries an additional permission notice. If this package or
+plugin source is redistributed, include licenses/Apache-2.0-sparkrun-0.3.10.txt,
+licenses/AGPL-3.0-SparkRoute-sparkrun-0.3.10.txt, and
+licenses/SparkRoute-Exception-sparkrun-0.3.10.txt. The exception does not remove
+the AGPL source obligations for SparkRoute or modifications to that plugin.
+
+MIT components
+--------------
+
+TileLang at tile-ai/tilelang@b95ee4ffb52ae26e15619cad38c6f41e7e0a2b46 is
+licensed under MIT; its license is reproduced in licenses/MIT-TileLang.txt.
+DeepSeek TileKernels at
+deepseek-ai/TileKernels@66258df6175d2f630ffecb04c5ab66bff8a2ae6a is licensed
+under MIT; its license is reproduced in licenses/MIT-TileKernels.txt.
+
+The optional official DeepSeek model is licensed under MIT. Its pinned license
+is reproduced in licenses/MIT-DeepSeek.txt. The refusal-direction source is a
+separate artifact from pqhaz/DeepSeek-V4.1-Flash-1017-heretic at revision
+12d58ad0878b5008e80d720251adb969a0069412. The source repository declares MIT
+and provides a LICENSE with DeepSeek copyright text; see ATTRIBUTION.md for
+the pinned source and checksum. This repository does not include the direction
+binary.
+
+Generated upstream source files are marked as modified in the local build
+context. Repository patches identify the upstream files and pin their before
+and after checksums in patches/manifest.json. No complete third-party source
+checkout or model weights are distributed in this repository.

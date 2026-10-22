@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+assets/
+config/site.json
+recipes/local-*.yaml
+*.pt
+*.safetensors
+*.pcap
+.env
+secrets/
+admin-token
+*.log

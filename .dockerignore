@@ -1,0 +1,13 @@
+*
+!overlay/
+!overlay/**
+!payload/
+!payload/*.py
+!assets/
+!assets/refusal_dirs_1017.safetensors
+!scripts/
+!scripts/launch.py
+!runtime.json
+!manifest.json
+!notices/
+!notices/**

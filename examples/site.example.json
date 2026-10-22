@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "model_path": "/srv/models/deepseek-v4.1-flash-1017",
+  "model_revision": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+  "cache_root": "/cache/runtime",
+  "master_port": 25000,
+  "gid_index": 3,
+  "nodes": [
+    {
+      "rank": 0,
+      "hostname": "spark-a",
+      "management_ip": "192.0.2.10",
+      "ip": "192.0.2.10",
+      "control_iface": "eth0",
+      "roce_peer_hcas": {
+        "1": [
+          "hca1"
+        ],
+        "2": [
+          "hca0"
+        ]
+      }
+    },
+    {
+      "rank": 1,
+      "hostname": "spark-b",
+      "management_ip": "192.0.2.11",
+      "ip": "192.0.2.11",
+      "control_iface": "eth0",
+      "roce_peer_hcas": {
+        "0": [
+          "hca1"
+        ],
+        "2": [
+          "hca0"
+        ]
+      }
+    },
+    {
+      "rank": 2,
+      "hostname": "spark-c",
+      "management_ip": "192.0.2.12",
+      "ip": "192.0.2.12",
+      "control_iface": "eth0",
+      "roce_peer_hcas": {
+        "0": [
+          "hca0"
+        ],
+        "1": [
+          "hca1"
+        ]
+      }
+    }
+  ]
+}

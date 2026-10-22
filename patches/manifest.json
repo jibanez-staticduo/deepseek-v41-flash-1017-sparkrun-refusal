@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "upstream_recipe_revision": "c38a24f2c9e714d2648769b12cd71aa6f0834d00",
+  "files": {
+    "vllm/models/deepseek_v4_1/nvidia/model.py": {
+      "before": "9443fedb35140e8e146f71ecd2603f40c0ebdc90de0488c47d711fcd284833fa",
+      "after": "a063dc4e14e9e0037a57b203ba9e621abb525ec451749799bd368e4bffdd9177"
+    },
+    "vllm/models/deepseek_v4_1/nvidia/vl_model.py": {
+      "before": "f386922b345001c2cef47e46ec5b80a2312508a217205402cc9135317d54fa6a",
+      "after": "88e241ebe5050f771352dd5239d253748f83c48093badcc3f0c1eb62674be8d6"
+    },
+    "vllm/models/deepseek_v4_1/nvidia/model_state.py": {
+      "before": "36de8bf234942ae5d2f36f5811827c39b7bd20aed164de113a8ba31c2a273e50",
+      "after": "d69f0a24ae3cf11d9a65eb23fe103addaff12f4148391e0dd9c4fbbbfc78eeb6"
+    },
+    "vllm/v1/core/sched/output.py": {
+      "before": "69745fc9870c67590874b5e6f959fe885a1c7d009894c7eeeaf51a13f96ff40b",
+      "after": "fbebfde451e8d8036d0d456612f44257aa9f1d92361637c2a0638cc378680cfa"
+    },
+    "vllm/v1/worker/gpu/model_runner.py": {
+      "before": "4dad9aa8e7964f33a11ce695fadfe010882f112d82e31a892a855527e8bc4d36",
+      "after": "c09f536bdf383c9f17f4db63fcaf231de33daeacfdb3a37cc02f278326256400"
+    },
+    "vllm/v1/worker/gpu/warmup.py": {
+      "before": "027b6b22eb4b7a7626a019625fb46d781ca9358c6910324dd361e2eda0093f39",
+      "after": "496793148716cd377f8a9e61bca9c1ad6bf6e8e6e70ac2d2599741a1e68879c3"
+    },
+    "vllm/v1/engine/input_processor.py": {
+      "before": "a5342c4c98e15bc823b670aa409952bdc6b88447db596537850fcf5f4f7964b7",
+      "after": "f6518bc64a648c7fce1ecffb40cd195f07487941203cfc26050cf7539ef3f66f"
+    },
+    "vllm/entrypoints/serve/__init__.py": {
+      "before": "36278041128fab7bebb55fab25db39e9b229a660239d13ac910202b27d7d0a51",
+      "after": "326c5db237f5f2da4a156248fb97547f34c1666a7aae77dcc089bf43983300cc"
+    },
+    "vllm/entrypoints/cli/serve.py": {
+      "before": "3eb557c63f1f7bdda22287fe9fcae184b40363ae211672c2b17742e33d255847",
+      "after": "5a213f408bd25327cc65a3546feef1777b5f7b1a33e36c5dcea68022ae14c4a1"
+    }
+  }
+}

@@ -1,0 +1,286 @@
+--- a/vllm/models/deepseek_v4_1/nvidia/model.py
++++ b/vllm/models/deepseek_v4_1/nvidia/model.py
+@@ -184,6 +184,10 @@
+         self.hc_sinkhorn_iters = config.hc_sinkhorn_iters
+         self.hc_eps = config.hc_eps
+         self.hc_post_alpha = 2.0
++        from vllm.refusal_projection import make_projection
++        self.refusal_projection = make_projection(
++            extract_layer_index(prefix), self.hidden_size
++        )
+         self.mhc = kernels.mhc(config)
+         mix_hc = (2 + self.hc_mult) * self.hc_mult
+         hc_dim = self.hc_mult * self.hidden_size
+@@ -301,6 +305,7 @@
+         engram_hashes: torch.Tensor | None = None,
+         engram_mask: torch.Tensor | None = None,
+         ced_indices: torch.Tensor | None = None,
++        refusal_lambdas: torch.Tensor | None = None,
+         sp_rows: sp_prefill.SPRows | None = None,
+     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+         previous_output = x if residual is not None else None
+@@ -340,6 +345,8 @@
+             # residual updates and experts only need the selected replay rows.
+             global_kv_ready = self.attn.prepare_global_kv(positions, x)
+             x = gather_rows(x, ced_indices)
++            if refusal_lambdas is not None:
++                refusal_lambdas = gather_rows(refusal_lambdas, ced_indices)
+             residual = gather_rows(residual, ced_indices)
+             post_mix = gather_rows(post_mix, ced_indices)
+             res_mix = gather_rows(res_mix, ced_indices)
+@@ -355,6 +362,12 @@
+                 x = self.attn(positions, x, None, global_kv_ready=global_kv_ready)
+             if sp_rows.unreduced:
+                 x = sp_prefill.unreduced_parts(x)
++        if self.refusal_projection is not None:
++            if refusal_lambdas is None:
++                raise RuntimeError("target refusal lambda rows were not staged")
++            local_lambdas = (refusal_lambdas if sp_rows is None
++                             else sp_rows.local_slice(refusal_lambdas))
++            x = self.refusal_projection(x, local_lambdas)
+         residual, post_mix, res_mix, x, ffn_pre = self.mhc.post_pre(
+             x,
+             residual,
+@@ -656,6 +669,7 @@
+         inputs_embeds: torch.Tensor | None = None,
+         lookback_token_ids: torch.Tensor | None = None,
+         ced_indices: torch.Tensor | None = None,
++        refusal_lambdas: torch.Tensor | None = None,
+     ) -> torch.Tensor | IntermediateTensors:
+         sp = None
+         # With CED the encoder layers (before ced_decoder_start) still run on
+@@ -760,6 +774,8 @@
+             # Pipeline transport keeps its original full-row ABI. A decoder
+             # stage gathers only the rows materialized by the preceding stage.
+             hidden_states = gather_rows(hidden_states, ced_indices)
++            if refusal_lambdas is not None:
++                refusal_lambdas = gather_rows(refusal_lambdas, ced_indices)
+             pre_mix = gather_rows(pre_mix, ced_indices)
+             positions = gather_rows(positions, ced_indices)
+             if input_ids is not None:
+@@ -794,8 +810,11 @@
+                 engram_mask,
+                 ced_indices=boundary_indices,
+                 sp_rows=sp,
++                refusal_lambdas=refusal_lambdas,
+             )
+             if boundary_indices is not None:
++                if refusal_lambdas is not None:
++                    refusal_lambdas = gather_rows(refusal_lambdas, ced_indices)
+                 positions = gather_rows(positions, ced_indices)
+                 if input_ids is not None:
+                     input_ids = gather_rows(input_ids, ced_indices)
+@@ -1087,6 +1106,7 @@
+         inputs_embeds: torch.Tensor | None = None,
+         lookback_token_ids: torch.Tensor | None = None,
+         ced_indices: torch.Tensor | None = None,
++        refusal_lambdas: torch.Tensor | None = None,
+     ) -> torch.Tensor | IntermediateTensors:
+         hidden_states = self.model(
+             input_ids,
+@@ -1095,6 +1115,7 @@
+             inputs_embeds,
+             lookback_token_ids=lookback_token_ids,
+             ced_indices=ced_indices,
++            refusal_lambdas=refusal_lambdas,
+         )
+         return hidden_states
+ 
+--- a/vllm/models/deepseek_v4_1/nvidia/vl_model.py
++++ b/vllm/models/deepseek_v4_1/nvidia/vl_model.py
+@@ -159,6 +159,7 @@
+         inputs_embeds: torch.Tensor | None = None,
+         lookback_token_ids: torch.Tensor | None = None,
+         ced_indices: torch.Tensor | None = None,
++        refusal_lambdas: torch.Tensor | None = None,
+         **kwargs,
+     ) -> torch.Tensor:
+         return self.language_model(
+@@ -168,6 +169,7 @@
+             inputs_embeds,
+             lookback_token_ids=lookback_token_ids,
+             ced_indices=ced_indices,
++            refusal_lambdas=refusal_lambdas,
+         )
+ 
+     def checkpoint_file_weight_filter(self, name: str) -> bool:
+--- a/vllm/models/deepseek_v4_1/nvidia/model_state.py
++++ b/vllm/models/deepseek_v4_1/nvidia/model_state.py
+@@ -111,6 +111,10 @@
+         device: torch.device,
+     ):
+         super().__init__(vllm_config, model, encoder_cache, device)
++        from vllm.refusal_rows import RefusalRows
++        from vllm.refusal_policy import feature_enabled
++        self.refusal_enabled = feature_enabled()
++        self.refusal_rows = RefusalRows(self.max_num_reqs, self.max_num_tokens, device)
+         self.ced_state: CEDState | None = None
+         self._ced_prompt_logprobs: set[str] = set()
+         self._ced_prefix_start: dict[str, int] = {}
+@@ -185,6 +189,9 @@
+ 
+     def add_request(self, req_index: int, new_req_data: NewRequestData) -> None:
+         super().add_request(req_index, new_req_data)
++        if self.refusal_enabled and new_req_data.boundary_checkpoint is not None:
++            raise ValueError("refusal does not support boundary checkpoint continuation")
++        self.refusal_rows.set_request(req_index, new_req_data.refusal_lambda, new_req_data.req_id)
+         if self.disk_engram_models and new_req_data.prefill_token_ids is not None:
+             self._prefill_tokens[new_req_data.req_id] = np.asarray(
+                 new_req_data.prefill_token_ids, dtype=np.int32
+@@ -206,6 +213,7 @@
+         self._ced_prefix_start[new_req_data.req_id] = prefix_start
+ 
+     def remove_request(self, req_id: str) -> None:
++        self.refusal_rows.remove_request(req_id)
+         super().remove_request(req_id)
+         self._prefill_tokens.pop(req_id, None)
+         self._ced_prompt_logprobs.discard(req_id)
+@@ -301,6 +309,7 @@
+         self, input_batch: InputBatch, req_states: RequestState
+     ) -> dict[str, torch.Tensor | None]:
+         model_inputs = super().prepare_inputs(input_batch, req_states)
++        model_inputs["refusal_lambdas"] = self.refusal_rows.fill(input_batch)
+         if self.ced_state is not None:
+             if self._ced_batch is not input_batch:
+                 self._stage_ced(input_batch)
+@@ -375,6 +384,7 @@
+ 
+     def prepare_dummy_inputs(self, num_reqs: int, num_tokens: int) -> dict[str, Any]:
+         model_inputs = super().prepare_dummy_inputs(num_reqs, num_tokens)
++        model_inputs["refusal_lambdas"] = self.refusal_rows.dummy(num_tokens)
+         if self.ced_state is not None:
+             # FULL descriptors may pad a short request far beyond128 rows.
+             # Capture their noncompact branch, regardless of dummy split;
+--- a/vllm/v1/core/sched/output.py
++++ b/vllm/v1/core/sched/output.py
+@@ -55,6 +55,7 @@
+     boundary_checkpoint_blocks: tuple[tuple[int, ...], ...] | None = None
+     recurrent_instruction_boundary: int | None = None
+     recurrent_prefill_tail_boundary: int | None = None
++    refusal_lambda: float = 0.0
+ 
+     @classmethod
+     def from_request(
+@@ -64,7 +65,10 @@
+         prefill_token_ids: list[int] | None = None,
+         uses_mrope: bool = False,
+     ) -> "NewRequestData":
++        from vllm.refusal_policy import parse_effective_lambda
++        refusal_lambda = parse_effective_lambda(request.cache_salt)
+         return cls(
++            refusal_lambda=refusal_lambda,
+             req_id=request.request_id,
+             prompt_token_ids=request.prompt_token_ids,
+             mm_features=strip_covered_mm_data(
+--- a/vllm/v1/worker/gpu/model_runner.py
++++ b/vllm/v1/worker/gpu/model_runner.py
+@@ -791,6 +791,12 @@
+             self.kv_cache_config,
+             self.max_num_reqs,
+         )
++        from vllm.refusal_policy import feature_enabled
++        if feature_enabled() and (self.pcp_manager is not None or self.ubatch_runner is not None
++                or self.parallel_config.pipeline_parallel_size != 1
++                or self.parallel_config.decode_context_parallel_size != 1
++                or self.parallel_config.data_parallel_size != 1):
++            raise ValueError("refusal rows require PP1/DP1/DCP1 without PCP or ubatching")
+         if self.speculator is not None:
+             self.speculator.pcp_manager = self.pcp_manager
+         initialize_mamba_ssu_backend(
+@@ -1479,6 +1485,11 @@
+             # chunk. Remove old state so it can be cleanly re-added below
+             # with the updated prompt_token_ids and mm_features.
+             if req_id in self.req_states.req_id_to_index:
++                from vllm.refusal_policy import feature_enabled
++                if feature_enabled():
++                    self.model_state.refusal_rows.check_update(
++                        req_id, new_req_data.refusal_lambda
++                    )
+                 prepare_update = getattr(
+                     self.model_state, "prepare_streaming_update", None
+                 )
+@@ -1651,7 +1662,8 @@
+         num_tokens = batch_req_state.num_tokens
+         num_tokens_after_padding = max(num_tokens, batch_desc.num_tokens)
+         assert num_tokens > 0
+-        if envs.VLLM_MOE_SKIP_PADDING:
++        from vllm.refusal_policy import feature_enabled
++        if envs.VLLM_MOE_SKIP_PADDING or feature_enabled():
+             # Mark trailing cudagraph-padding rows so kernels can skip work for
+             # them when supported.
+             is_padding = self.input_buffers.is_padding
+--- a/vllm/v1/worker/gpu/warmup.py
++++ b/vllm/v1/worker/gpu/warmup.py
+@@ -398,6 +398,8 @@
+         model_runner.kv_block_zeroer.warmup(model_runner.kv_cache_config.num_blocks)
+ 
+     # Step 1: Prefill all requests with 1 + decode_query_len prompt tokens each.
++    from vllm.refusal_policy import stamp_cache_salt
++    refusal_warmup_salt = stamp_cache_salt("refusal:0")
+     new_reqs = [
+         NewRequestData.from_request(
+             Request(
+@@ -406,6 +408,7 @@
+                 sampling_params,
+                 pooling_params,
+                 mm_features=warmup_mm_features,
++                cache_salt=refusal_warmup_salt,
+             ),
+             block_ids=tuple(_alloc_blocks(n) for n in prefill_block_counts),
+             prefill_token_ids=prompt_token_ids,
+@@ -527,6 +530,7 @@
+                     SamplingParams(temperature=0.0),
+                     None,
+                     mm_features=warmup_mm_features,
++                    cache_salt=refusal_warmup_salt,
+                 ),
+                 block_ids=tuple(_alloc_blocks(n) for n in greedy_block_counts),
+                 prefill_token_ids=greedy_prompt,
+--- a/vllm/v1/engine/input_processor.py
++++ b/vllm/v1/engine/input_processor.py
+@@ -419,6 +419,8 @@
+                     )
+                 )
+ 
++        from vllm.refusal_policy import stamp_cache_salt
++        refusal_salt = stamp_cache_salt(decoder_input.get("cache_salt"))
+         return EngineCoreRequest(
+             request_id=request_id,
+             prompt_token_ids=prompt_token_ids,
+@@ -429,7 +431,7 @@
+             pooling_params=pooling_params,
+             arrival_time=arrival_time,
+             lora_request=lora_request,
+-            cache_salt=decoder_input.get("cache_salt"),
++            cache_salt=refusal_salt,
+             priority=priority,
+             data_parallel_rank=data_parallel_rank,
+             trace_headers=trace_headers,
+--- a/vllm/entrypoints/serve/__init__.py
++++ b/vllm/entrypoints/serve/__init__.py
+@@ -39,6 +39,9 @@
+ 
+     attach_tokenize_router(app)
+ 
++    from vllm.refusal_api import attach_router as attach_refusal_router
++    attach_refusal_router(app)
++
+ 
+ def register_vllm_dev_api_routers(app: FastAPI):
+     logger.warning(
+--- a/vllm/entrypoints/cli/serve.py
++++ b/vllm/entrypoints/cli/serve.py
+@@ -104,6 +104,13 @@
+             # Default to 0 in headless mode (no API servers)
+             args.api_server_count = 0
+ 
++        from vllm.refusal_policy import feature_enabled
++        if feature_enabled() and not args.headless:
++            if args.api_server_count not in (None, 1):
++                raise ValueError("refusal hot default requires one API server")
++            if rust_frontend_path or getattr(args, "grpc", False):
++                raise ValueError("refusal hot default requires the Python API server")
++            args.api_server_count = 1
+         # Detect LB mode for defaulting api_server_count.
+         # Multi-port: --data-parallel-multi-port-external-lb
+         # External LB: --data-parallel-external-lb or --data-parallel-rank

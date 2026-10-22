@@ -1,0 +1,4 @@
+# Preserve upstream license bytes and unified patch context exactly.
+licenses/* -text -whitespace
+LICENSE -text -whitespace
+patches/*.patch -text -whitespace
