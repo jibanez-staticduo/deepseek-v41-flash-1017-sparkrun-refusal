@@ -14,6 +14,12 @@ The implementation targets the r6x TileLang/vLLM stack on NVIDIA GB10 systems. I
 
 The code does not rewrite model weights. Direction data is a separate artifact fetched from its published origin and checked against the SHA-256 recorded in the runtime code. The pinned source repository declares MIT (`license: mit`) and includes an MIT license. This repository does not redistribute the artifact; review upstream terms before redistributing it or an image containing it.
 
+### Provenance And Projection Scope
+
+The 38 F32[5120] vectors are rows 2-39 of the author's `projected` storage in `pqhaz/DeepSeek-V4.1-Flash-1017-heretic@12d58ad0878b5008e80d720251adb969a0069412/ablation_directions.pt`. They are not directions from the earlier 0731 family and were not calibrated by us. The [provenance audit](docs/provenance.md) records source files, immutable revisions, hashes, extraction and limits of the local tensor comparison, with links to the author's README and specification.
+
+**This implementation projects only target backbone WO-B layers 2-39. It does not project MTP/DSpark layers 40-42.** A changed target with an unchanged drafter could reduce speculative acceptance and add verification work; that possible acceptance/throughput cost has not been measured here. The earlier Oppo 0731 handover describes projecting both target and drafter using different, width-4096 directions. This compares scopes with that handover, not Oppo's current service. See [target/drafter boundaries](docs/provenance.md#target-and-drafter-scope).
+
 ## Model and runtime
 
 The runtime serves DeepSeek V4.1 Flash 1017 using the official mixed-precision checkpoint: native MXFP4 expert weights, FP8 dense weights, and BF16 activations. The tested runtime configuration uses TileLang kernels, SSD-backed Engram tables, DSpark with five speculative tokens, and a configured 1,048,576-token maximum. These are runtime configuration choices; they do not change the checkpoint.
@@ -39,6 +45,8 @@ The directions are identified as the original 1017 directions, rather than SVD-d
 The recorded integration validation includes the full TP3 model starting, CUDA graph capture, API inference, concurrent requests using different refusal values, and an 11,210-token prefill. A projector-level GPU run with lambda 2.5 also completed. The host used an experimental driver/kernel combination; this does not qualify other driver versions or systems.
 
 The available evidence does **not** include a fixed refusal-quality corpus, a measured refusal-rate comparison, a model-quality comparison, a controlled performance comparison, or a repeated 1M-token-context test. Those outcomes remain unmeasured. A successful API response or a projection norm is not evidence of a refusal-quality improvement.
+
+The publication's omitted test was `CudaProjectionTests.test_cuda_rows_read_mutated_lambda_values`, skipped because CUDA was unavailable in the CPU test environment. It checks eager calls before/after an in-place lambda update; it does **not** capture or replay a CUDA Graph. An isolated capture -> mutate lambda -> replay test was not in that suite and is not claimed as passed. See [the exact test and evidence boundary](docs/provenance.md#exact-omitted-cuda-test).
 
 See [architecture](docs/architecture.md), [validation](docs/validation.md), and [security](docs/security.md) for implementation details and operational limits.
 

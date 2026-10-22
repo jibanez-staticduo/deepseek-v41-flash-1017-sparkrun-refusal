@@ -2,6 +2,8 @@
 
 ## What has been exercised
 
+See [direction provenance and exact CUDA-test coverage](provenance.md) for the audited source revisions, artifact hashes, target/drafter scope and the distinction between eager lambda mutation and CUDA Graph replay. The skipped CUDA test is not a graph replay test and remains unexecuted; separate graph-enabled service probes do not establish which execution path served each request.
+
 The recorded target run used a three-system GB10 / SM121 TP3 deployment. Evidence includes a full model start, CUDA graph capture, API inference, simultaneous requests with different refusal values, and a successful 11,210-token prefill. The projector was also exercised on GPU at lambda 2.5. The earlier integration suite had 39 cases: 38 passed and one CUDA-isolated case remained skipped; that count describes the earlier code state and is not a result for this public checkout. These results establish that those paths ran in that environment; they do not establish model quality or broad hardware compatibility.
 
 The recorded 1M context value is a configured maximum, not a repeated full-context benchmark. No controlled refusal-quality corpus, refusal-rate delta, quality regression study, or performance comparison is available. The reported SVD energy retention (81.15%) and residual of 40.77%-48.00% of the source delta norm are numerical artifact comparisons and must not be presented as behavioral measurements.
