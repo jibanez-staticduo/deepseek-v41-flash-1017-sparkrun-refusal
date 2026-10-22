@@ -27,6 +27,35 @@ acknowledgment does not replace the component, model or direction-data credits
 and licenses below. Infatoshi is credited for the referenced native-checkpoint
 comparison documented in [provenance](docs/provenance.md).
 
+### Pocharlies Reference Implementation
+
+According to the lineage declared by its authors, Pocharlies
+(`@oppocharliesllmbot`, `pocharlies-org`) authored the reference implementation
+ported here and its CUDA Graph fix documented as `rank1g`; Dani retains credit
+for the mechanism's design. The supplied reference is the private handover
+`pocharlies-org/qwen38-recipe-handover`, directory `deepseek-rank1-refusal/`,
+declared commit `0af2f04da7545f1687fe7aae85250ca89929304b`. Its identifiers
+include `patches/0001-rank1-projection.patch`,
+`patches/0002-per-request-lambda.patch`, `extract_refusal_dirs.py`, and
+`FASE1.md`, `FASE2.md`, `FASE3.md`. Those identifiers exist in the supplied
+material; the handover is not publicly accessible or redistributed here.
+This is not an independent audit of the authors' Git history or current service.
+
+The reference supplies the adapted patterns of an in-place device lambda
+tensor (never rebinding it) for CUDA Graphs, distinct target/drafter roles,
+lambda in the prefix-cache hash identity, and per-request `cache_salt`.
+Other prior refusal implementations attributed to Pocharlies are the resident
+qwen38 per-request dial (working lambda 1.0) and the image source artifact
+`images/deepseek-v4-rank1` for DeepSeek V4.0-Flash 0731 (46 F32[4096]
+directions and author-reported lambda-0 bit-exactness). The latter identifier
+is documented in the private handover. No public source URL for either prior
+implementation has been verified; no private registry address is published.
+
+The present third-generation 1017 integration adapts that reference to a
+different runtime and request/row path. It uses pqhaz directions without our
+recalibration and projects only target layers 2-39, not the drafter. This credit
+does not extend validation claims or replace the existing third-party licenses.
+
 ## Sources used by the recipe/runtime
 
 | Component | Pinned source | License | License SHA-256 | Required handling |

@@ -16,6 +16,22 @@ of his Git history or service, nor a claim of original authorship of the
 underlying mathematical projection. See README.md and ATTRIBUTION.md for the
 reported milestones and the separate component and data credits.
 
+According to the lineage declared by its authors, the reference implementation
+ported here and the CUDA Graph fix documented as rank1g are by Pocharlies
+(@oppocharliesllmbot / pocharlies-org); mechanism design remains credited to Dani.
+The private reference is pocharlies-org/qwen38-recipe-handover,
+deepseek-rank1-refusal/, declared commit
+0af2f04da7545f1687fe7aae85250ca89929304b. It includes the 0001-rank1-projection
+and 0002-per-request-lambda patches, extraction script and FASE1-3 documents.
+Its adapted patterns include the device lambda tensor mutated in place (never
+rebound), target/drafter role separation, lambda in prefix-cache hash identity,
+and cache_salt per request. Prior implementations attributed to Pocharlies are
+the resident qwen38 refusal dial and images/deepseek-v4-rank1 for 0731. No public
+URL for those implementations has been verified. These are attributed lineage
+statements, not an independent Git-history or live-service audit. The current
+1017 implementation remains a third generation with pqhaz directions not
+recalibrated by this project. See ATTRIBUTION.md for identifiers and boundaries.
+
 Apache-2.0 components
 ---------------------
 
